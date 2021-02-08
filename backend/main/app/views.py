@@ -8,42 +8,55 @@ import json
 
 class Mongo():
   def __init__(self):
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    f = open("dev_url.txt", "r") #For Development only Comment before build
+    DATABASE_URL = f.readline() #For Development
+    #DATABASE_URL = os.getenv("DATABASE_URL") #For Production
     self.cluster = MongoClient(DATABASE_URL)
     self.db = self.cluster["xmemeDB"]
     self.collection = self.db["xmemeDB"]
   
   def getPostIdNumber(self):
-    results = self.collection.find({})
-    ids = []
-    for result in results:
-      ids.append(result["_id"])
-    post_id = max(ids)
-    post_id += 1
-    return post_id
+    try:
+      results = self.collection.find({})
+      ids = []
+      for result in results:
+        ids.append(result["_id"])
+      post_id = max(ids)
+      post_id += 1
+      return post_id
+    except:
+      return {"error":"Databse is not available right now."}
   
   def insertToDB(self,name="Anonymous",caption="N/A",url="N/A"):
-    post_id = self.getPostIdNumber()
-    post = {"_id":post_id,"name":name,"caption":caption,"url":url}
-    self.collection.insert_one(post)
-    
-    return {"id":post['_id']}
-  
+    try:
+      post_id = self.getPostIdNumber()
+      post = {"_id":post_id,"name":name,"caption":caption,"url":url}
+      self.collection.insert_one(post)
+      
+      return {"id":post['_id']}
+    except:
+      return {"error":"Databse is not available right now."}
+
   def getMemes(self):
-    results = self.collection.find({})
-    allMemes = []
-    for meme in results:
-      allMemes.append(meme)
-    allMemes.reverse()
-    allMemes = allMemes[:100]
-    return json.dumps(allMemes)
-  
+    try:
+      results = self.collection.find({})
+      allMemes = []
+      for meme in results:
+        allMemes.append(meme)
+      allMemes.reverse()
+      allMemes = allMemes[:100]
+      return json.dumps(allMemes)
+    except:
+      return {"error":"Databse is not available right now."}
   def getMemeById(self,postId):
-    result = self.collection.find_one({"_id":postId})
-    if(result == None):
-      return {"error":"404"}
-    else:
-      return json.dumps(result)
+    try:
+      result = self.collection.find_one({"_id":postId})
+      if(result == None):
+        return {"error":"404"}
+      else:
+        return json.dumps(result)
+    except:
+      return {"error":"Databse is not available right now."}
 
 
 @app.route("/memes",methods = ['POST','GET'])
@@ -56,7 +69,7 @@ def index():
     
     mongoObj = Mongo()
     return mongoObj.insertToDB(name,caption,url)
-  else:    
+  else:
     mongoObj = Mongo()
     return mongoObj.getMemes()
 
