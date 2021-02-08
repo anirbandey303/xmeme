@@ -8,9 +8,9 @@ import json
 
 class Mongo():
   def __init__(self):
-    f = open("dev_url.txt", "r") #For Development only Comment before build
-    DATABASE_URL = f.readline() #For Development
-    #DATABASE_URL = os.getenv("DATABASE_URL") #For Production
+    #f = open("dev_url.txt", "r") #For Development only Comment before build
+    #DATABASE_URL = f.readline() #For Development
+    DATABASE_URL = os.getenv("DATABASE_URL") #For Production
     self.cluster = MongoClient(DATABASE_URL)
     self.db = self.cluster["xmemeDB"]
     self.collection = self.db["xmemeDB"]
