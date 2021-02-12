@@ -1,60 +1,61 @@
+from datetime import datetime
 from app import app
+from app import database
 from flask import redirect
 from flask import request
+from flask import jsonify
 from flask import url_for
 from pymongo import MongoClient
+from app import ma
 import os
 import json
 
+class MemeDB(database.Model):
+  id = database.Column(database.Integer, primary_key=True)
+  name = database.Column(database.String(255))
+  caption = database.Column(database.String(255))
+  url = database.Column(database.String(255))
+  dateTime = database.Column(database.DateTime, default=datetime.now)
+
+
+class MemeSchema(ma.Schema):
+  class Meta:
+    fields = ('id','name','caption','url')
+
+meme_schema = MemeSchema()
+memes_schema = MemeSchema(many=True)
+
 class Mongo():
-  def __init__(self):
-    #f = open("dev_url.txt", "r") #For Development only Comment before build
-    #DATABASE_URL = f.readline() #For Development
-    DATABASE_URL = os.getenv("DATABASE_URL") #For Production
-    self.cluster = MongoClient(DATABASE_URL)
-    self.db = self.cluster["xmemeDB"]
-    self.collection = self.db["xmemeDB"]
-  
-  def getPostIdNumber(self):
-    try:
-      results = self.collection.find({})
-      ids = []
-      for result in results:
-        ids.append(result["_id"])
-      post_id = max(ids)
-      post_id += 1
-      return post_id
-    except:
-      return {"error":"Databse is not available right now."}
-  
+    
   def insertToDB(self,name="Anonymous",caption="N/A",url="N/A"):
     try:
-      post_id = self.getPostIdNumber()
-      post = {"_id":post_id,"name":name,"caption":caption,"url":url}
-      self.collection.insert_one(post)
       
-      return {"id":post['_id']}
+      newRow = MemeDB(name=name,caption=caption,url=url)
+      database.session.add(newRow)
+      database.session.commit()
+      return {"id":newRow.id}
     except:
       return {"error":"Databse is not available right now."}
 
   def getMemes(self):
     try:
-      results = self.collection.find({})
-      allMemes = []
-      for meme in results:
-        allMemes.append(meme)
-      allMemes.reverse()
-      allMemes = allMemes[:100]
-      return json.dumps(allMemes)
+      
+      allMemes = MemeDB.query.order_by(MemeDB.dateTime.desc()).all()
+      result = memes_schema.dump(allMemes)
+      return jsonify(result)
     except:
-      return {"error":"Databse is not available right now."}
+      return {"error":"Databse is not available right now.."}
+
   def getMemeById(self,postId):
     try:
-      result = self.collection.find_one({"_id":postId})
-      if(result == None):
-        return {"error":"404"}
+      # database.session.query(MemeDB).delete()
+      # database.session.commit()
+      meme = MemeDB.query.get(postId)
+      if(meme):
+        return meme_schema.jsonify(meme)
       else:
-        return json.dumps(result)
+        return {"error":"404"}
+
     except:
       return {"error":"Databse is not available right now."}
 
